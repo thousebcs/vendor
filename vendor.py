@@ -2,8 +2,26 @@ import streamlit as st
 import snowflake.connector
 import pandas as pd
 
-# Set page title
-st.title("Vendors Dashboard")
+# Custom CSS for centering elements
+st.markdown("""
+<style>
+    .centered-image {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    .centered-image img {
+        max-width: 300px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Centered logo using markdown
+st.markdown("""
+<div class="centered-image">
+    <img src="https://i.ibb.co/Y4ZXb53Y/BC-Stone-Homes-Your-Land-or-Ours-Logo-1.png" alt="BC Stone Homes Logo">
+</div>
+""", unsafe_allow_html=True)
 
 # Get query parameters
 query_params = st.query_params.to_dict()
@@ -74,8 +92,6 @@ if conn:
         cursor.execute(query)
         df = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
         cursor.close()
-        
-        st.image("https://i.ibb.co/Y4ZXb53Y/BC-Stone-Homes-Your-Land-or-Ours-Logo-1.png", width=500)
         
         # Display the DataFrame
         st.dataframe(df)
