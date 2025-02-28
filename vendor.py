@@ -21,7 +21,6 @@ def create_session():
             account=st.secrets["snowflake"]["account"],
             user=st.secrets["snowflake"]["user"],
             password=st.secrets["snowflake"]["password"],
-            authenticator=st.secrets["snowflake"]["authenticator"],
             role=st.secrets["snowflake"]["role"],
             warehouse=st.secrets["snowflake"]["warehouse"],
             database=st.secrets["snowflake"]["database"],
