@@ -1,6 +1,7 @@
 import streamlit as st
 import snowflake.connector
 import pandas as pd
+import os
 
 # Set page title
 st.title("Vendors Dashboard")
@@ -16,16 +17,46 @@ if vendor_name:
 # Connect to Snowflake
 def create_session():
     try:
-        # Always use direct username/password authentication
-        conn = snowflake.connector.connect(
-            account=st.secrets["snowflake"]["account"],
-            user=st.secrets["snowflake"]["user"],
-            password=st.secrets["snowflake"]["password"],
-            role=st.secrets["snowflake"]["role"],
-            warehouse=st.secrets["snowflake"]["warehouse"],
-            database=st.secrets["snowflake"]["database"],
-            schema=st.secrets["snowflake"]["schema"]
-        )
+        # Check if we're in a local environment or cloud
+        is_local = not (os.environ.get('STREAMLIT_SHARING') or os.environ.get('STREAMLIT_SERVER_URL'))
+        
+        if is_local:
+            # For local development, use externalbrowser SSO
+            conn = snowflake.connector.connect(
+                account=st.secrets["snowflake"]["account"],
+                user=st.secrets["snowflake"]["user"],
+                authenticator="externalbrowser",
+                role=st.secrets["snowflake"]["role"],
+                warehouse=st.secrets["snowflake"]["warehouse"],
+                database=st.secrets["snowflake"]["database"],
+                schema=st.secrets["snowflake"]["schema"]
+            )
+            st.toast("When the browser opens, please complete the Microsoft SSO authentication.", icon="ℹ️")
+        else:
+            # For cloud deployment, use OAuth token if available
+            if "oauth_token" in st.secrets["snowflake"]:
+                conn = snowflake.connector.connect(
+                    account=st.secrets["snowflake"]["account"],
+                    user=st.secrets["snowflake"]["user"],
+                    token=st.secrets["snowflake"]["oauth_token"],
+                    role=st.secrets["snowflake"]["role"],
+                    warehouse=st.secrets["snowflake"]["warehouse"],
+                    database=st.secrets["snowflake"]["database"],
+                    schema=st.secrets["snowflake"]["schema"]
+                )
+                st.toast("Connected using OAuth token", icon="✅")
+            else:
+                # Fallback to password if OAuth token is not available
+                conn = snowflake.connector.connect(
+                    account=st.secrets["snowflake"]["account"],
+                    user=st.secrets["snowflake"]["user"],
+                    password=st.secrets["snowflake"]["password"],
+                    role=st.secrets["snowflake"]["role"],
+                    warehouse=st.secrets["snowflake"]["warehouse"],
+                    database=st.secrets["snowflake"]["database"],
+                    schema=st.secrets["snowflake"]["schema"]
+                )
+                st.toast("Connected using password authentication", icon="✅")
         
         st.toast("Successfully connected to database!", icon="✅")
         return conn
