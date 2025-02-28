@@ -75,6 +75,8 @@ if conn:
         df = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
         cursor.close()
         
+        st.image("https://i.ibb.co/Y4ZXb53Y/BC-Stone-Homes-Your-Land-or-Ours-Logo-1.png", width=500)
+        
         # Display the DataFrame
         st.dataframe(df)
         
@@ -88,4 +90,4 @@ if conn:
         if conn:
             conn.close()
 else:
-    st.error("Failed to establish connection to Snowflake.")
+    st.error("Failed to establish connection to database.")
