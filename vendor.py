@@ -27,9 +27,6 @@ def create_session():
             schema=st.secrets["snowflake"]["schema"]
         )
         
-        # Display connection message as toast
-        st.toast("When the browser opens, please complete the Microsoft SSO authentication.", icon="ℹ️")
-        
         if conn:
             st.toast("Successfully connected to database!", icon="✅")
         
