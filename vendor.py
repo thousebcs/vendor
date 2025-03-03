@@ -253,6 +253,7 @@ if conn:
                                 <h3>{vendor_display_name} Tickets</h3>
                             </div>
                             """, unsafe_allow_html=True)
+                            st.markdown(f'<p style="font-size: 1.2em; margin-top: -10px;"><strong>{len(df)}</strong> <span style="font-size: 0.7em; color:#757575; vertical-align: middle;">Open Tickets</span></p>', unsafe_allow_html=True)
                         else:
                             st.subheader(f"{vendor_display_name} Tickets")
                             st.markdown(f'<p style="font-size: 1.2em; margin-top: -10px;"><strong>{len(df)}</strong> <span style="font-size: 0.7em; color:#757575; vertical-align: middle;">Open Tickets</span></p>', unsafe_allow_html=True)
