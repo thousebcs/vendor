@@ -5,7 +5,7 @@ import pandas as pd
 # Set page configuration
 st.set_page_config(
     page_title="Vendor Tickets Dashboard",
-    page_icon="📋",
+    page_icon="https://i.ibb.co/r2W0Bpmg/BCS-Mark-CLR-1.png",
     layout="wide",
 )
 
