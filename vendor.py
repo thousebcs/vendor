@@ -24,6 +24,10 @@ if current_path and current_path != "/":
 if not vendor_name:
     vendor_name = st.query_params.get("vendor", None)
 
+# Show warning if no vendor filter is applied
+if not vendor_name:
+    st.warning("⚠️ This is not the right link. Please make sure to use the URL provided by BC Stone Homes to access your tickets.")
+
 # Show current filter if applied
 if vendor_name:
     pass
@@ -216,7 +220,7 @@ if conn:
             ELSE ''
         END AS URL_TEXT
     FROM PRODUCTION.COMPANY.TICKETS
-    WHERE STATUS NOT IN ('184338463', '230160731', '230030964', '184367022') AND ASSET_TICKET_DUE_DATE IS NOT NULL
+    WHERE STATUS NOT IN ('184338463', '230160731', '230030964', '184367022', '1016589633', '1016563639', '1016589638') AND ASSET_TICKET_DUE_DATE IS NOT NULL
     """
     
     # Add vendor filter if provided in query params
@@ -232,13 +236,13 @@ if conn:
         df = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
         cursor.close()
         
-        # Create a container for the dataframe and logo
-        with st.container(border=True, height=None):
-            # Create a header with title and logo
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                # Display vendor name in header if filtered, otherwise show "All Vendor Tickets"
-                if vendor_name:
+        # Only show the container and its contents if a vendor filter is applied
+        if vendor_name:
+            # Create a container for the dataframe and logo
+            with st.container(border=True, height=None):
+                # Create a header with title and logo
+                col1, col2 = st.columns([3, 1])
+                with col1:
                     # Get the first row's vendor name and logo URL
                     vendor_info = df.iloc[0] if not df.empty else None
                     if vendor_info is not None:
@@ -257,101 +261,98 @@ if conn:
                         else:
                             st.subheader(f"{vendor_display_name} Tickets")
                             st.markdown(f'<p style="font-size: 1.2em; margin-top: -10px;"><strong>{len(df)}</strong> <span style="font-size: 0.7em; color:#757575; vertical-align: middle;">Open Tickets</span></p>', unsafe_allow_html=True)
-                else:
-                    st.subheader("All Vendor Tickets")
-                    st.markdown(f'<p style="font-size: 1.2em; margin-top: -10px;"><strong>{len(df)}</strong> <span style="font-size: 0.7em; color:#757575; vertical-align: middle;">Open Tickets</span></p>', unsafe_allow_html=True)
-            with col2:
-                st.markdown("""
-                <div class="right-aligned-image">
-                    <img src="https://i.ibb.co/Y4ZXb53Y/BC-Stone-Homes-Your-Land-or-Ours-Logo-1.png" alt="BC Stone Homes Logo">
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Add filters in 3 columns
-            filter_col1, filter_col2, filter_col3 = st.columns(3)
-            
-            with filter_col1:
-                # Filter for Type
-                type_options = sorted(df['TYPE'].dropna().unique().tolist())
-                selected_types = st.multiselect('Type', options=type_options, key='type_filter')
-            
-            with filter_col2:
-                # Filter for Property Name
-                property_options = sorted(df['PROPERTY_NAME'].dropna().unique().tolist())
-                selected_properties = st.multiselect('Property Name', options=property_options, key='property_filter')
-            
-            with filter_col3:
-                # Filter for Due Date
-                # Convert to datetime for proper sorting if it's not already
-                if 'ASSET_TICKET_DUE_DATE' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['ASSET_TICKET_DUE_DATE']):
-                    df['ASSET_TICKET_DUE_DATE'] = pd.to_datetime(df['ASSET_TICKET_DUE_DATE'], errors='coerce')
+                with col2:
+                    st.markdown("""
+                    <div class="right-aligned-image">
+                        <img src="https://i.ibb.co/Y4ZXb53Y/BC-Stone-Homes-Your-Land-or-Ours-Logo-1.png" alt="BC Stone Homes Logo">
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                # Format dates to remove timestamp - convert to string with just the date part
-                df['DUE_DATE_DISPLAY'] = df['ASSET_TICKET_DUE_DATE'].dt.date
-                due_date_options = sorted(df['DUE_DATE_DISPLAY'].dropna().unique().tolist())
-                selected_due_dates = st.multiselect('Due Date', options=due_date_options, key='due_date_filter')
-            
-            # Apply filters to dataframe
-            filtered_df = df.copy()
-            
-            if selected_types:
-                filtered_df = filtered_df[filtered_df['TYPE'].isin(selected_types)]
-            
-            if selected_properties:
-                filtered_df = filtered_df[filtered_df['PROPERTY_NAME'].isin(selected_properties)]
-            
-            if selected_due_dates:
-                filtered_df = filtered_df[filtered_df['DUE_DATE_DISPLAY'].isin(selected_due_dates)]
-            
-            # Format the display dataframe to show dates without timestamps
-            display_df = filtered_df.copy()
-            # Replace the original date column with the formatted one for display
-            if 'ASSET_TICKET_DUE_DATE' in display_df.columns:
-                display_df['ASSET_TICKET_DUE_DATE'] = display_df['DUE_DATE_DISPLAY']
-            
-            # Create a new column with HTML links for pricing
-            display_df['PRICING'] = display_df.apply(
-                lambda row: f'<a href="{row["URL"]}" target="_blank">{row["URL_TEXT"]}</a>' 
-                if pd.notna(row['URL']) else "", 
-                axis=1
-            )
-            
-            # Create a new column with HTML links for Google Maps
-            display_df['DIRECTIONS'] = display_df.apply(
-                lambda row: f'<a href="{row["GOOGLE_MAPS_URL"]}" target="_blank">Get Directions</a>' 
-                if pd.notna(row['GOOGLE_MAPS_URL']) else "", 
-                axis=1
-            )
-            
-            # Create a new column with HTML links for File URL
-            display_df['FILE_URL'] = display_df.apply(
-                lambda row: f'<a href="{row["TICKET_SCOPE_FILE_URL"]}" target="_blank">{row["TICKET_SCOPE_MASTER_FILE_NAME"]}</a>' 
-                if pd.notna(row['TICKET_SCOPE_FILE_URL']) else "", 
-                axis=1
-            )
-            
-            # Select and rename columns for display
-            display_columns = {
-                'TYPE': 'Type',
-                'PROPERTY_NAME': 'Property',
-                'NAME': 'Name',
-                'TICKET_SCOPE': 'Scope',
-                'ASSET_TICKET_DUE_DATE': 'Due Date',
-                'FILE_URL': 'File URL',
-                'DIRECTIONS': 'Directions',
-                'PRICING': 'Pricing'
-            }
-            
-            html_df = display_df[display_columns.keys()].rename(columns=display_columns)
-            
-            # Generate HTML table with links
-            html = html_df.to_html(escape=False, index=False)
-            
-            # Display the HTML table
-            st.markdown(f'<div class="dataframe-container">{html}</div>', unsafe_allow_html=True)
-            
-            # Show record count
-            st.toast(f"Found {len(filtered_df)} records", icon="📊")
+                # Add filters in 3 columns
+                filter_col1, filter_col2, filter_col3 = st.columns(3)
+                
+                with filter_col1:
+                    # Filter for Type
+                    type_options = sorted(df['TYPE'].dropna().unique().tolist())
+                    selected_types = st.multiselect('Type', options=type_options, key='type_filter')
+                
+                with filter_col2:
+                    # Filter for Property Name
+                    property_options = sorted(df['PROPERTY_NAME'].dropna().unique().tolist())
+                    selected_properties = st.multiselect('Property Name', options=property_options, key='property_filter')
+                
+                with filter_col3:
+                    # Filter for Due Date
+                    # Convert to datetime for proper sorting if it's not already
+                    if 'ASSET_TICKET_DUE_DATE' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['ASSET_TICKET_DUE_DATE']):
+                        df['ASSET_TICKET_DUE_DATE'] = pd.to_datetime(df['ASSET_TICKET_DUE_DATE'], errors='coerce')
+                    
+                    # Format dates to remove timestamp - convert to string with just the date part
+                    df['DUE_DATE_DISPLAY'] = df['ASSET_TICKET_DUE_DATE'].dt.date
+                    due_date_options = sorted(df['DUE_DATE_DISPLAY'].dropna().unique().tolist())
+                    selected_due_dates = st.multiselect('Due Date', options=due_date_options, key='due_date_filter')
+                
+                # Apply filters to dataframe
+                filtered_df = df.copy()
+                
+                if selected_types:
+                    filtered_df = filtered_df[filtered_df['TYPE'].isin(selected_types)]
+                
+                if selected_properties:
+                    filtered_df = filtered_df[filtered_df['PROPERTY_NAME'].isin(selected_properties)]
+                
+                if selected_due_dates:
+                    filtered_df = filtered_df[filtered_df['DUE_DATE_DISPLAY'].isin(selected_due_dates)]
+                
+                # Format the display dataframe to show dates without timestamps
+                display_df = filtered_df.copy()
+                # Replace the original date column with the formatted one for display
+                if 'ASSET_TICKET_DUE_DATE' in display_df.columns:
+                    display_df['ASSET_TICKET_DUE_DATE'] = display_df['DUE_DATE_DISPLAY']
+                
+                # Create a new column with HTML links for pricing
+                display_df['PRICING'] = display_df.apply(
+                    lambda row: f'<a href="{row["URL"]}" target="_blank">{row["URL_TEXT"]}</a>' 
+                    if pd.notna(row['URL']) else "", 
+                    axis=1
+                )
+                
+                # Create a new column with HTML links for Google Maps
+                display_df['DIRECTIONS'] = display_df.apply(
+                    lambda row: f'<a href="{row["GOOGLE_MAPS_URL"]}" target="_blank">Get Directions</a>' 
+                    if pd.notna(row['GOOGLE_MAPS_URL']) else "", 
+                    axis=1
+                )
+                
+                # Create a new column with HTML links for File URL
+                display_df['FILE_URL'] = display_df.apply(
+                    lambda row: f'<a href="{row["TICKET_SCOPE_FILE_URL"]}" target="_blank">{row["TICKET_SCOPE_MASTER_FILE_NAME"]}</a>' 
+                    if pd.notna(row['TICKET_SCOPE_FILE_URL']) else "", 
+                    axis=1
+                )
+                
+                # Select and rename columns for display
+                display_columns = {
+                    'TYPE': 'Type',
+                    'PROPERTY_NAME': 'Property',
+                    'NAME': 'Name',
+                    'TICKET_SCOPE': 'Scope',
+                    'ASSET_TICKET_DUE_DATE': 'Due Date',
+                    'FILE_URL': 'File URL',
+                    'DIRECTIONS': 'Directions',
+                    'PRICING': 'Pricing'
+                }
+                
+                html_df = display_df[display_columns.keys()].rename(columns=display_columns)
+                
+                # Generate HTML table with links
+                html = html_df.to_html(escape=False, index=False)
+                
+                # Display the HTML table
+                st.markdown(f'<div class="dataframe-container">{html}</div>', unsafe_allow_html=True)
+                
+                # Show record count
+                st.toast(f"Found {len(filtered_df)} records", icon="📊")
         
     except Exception as e:
         st.error(f"Error executing query: {e}")
